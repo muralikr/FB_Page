@@ -1,3 +1,255 @@
-<h1>Testing Github Pages</h1>
+<!DOCTYPE html>
+<html>
+	<meta charset='utf-8'>
+	<head>
+		<title>Facebook Pages</title>
+		<style type='text/css'>
+            input, button{
+                border: 2px solid #00AAFF;
+                padding: 0.5em 0.5em;
+            }
+			button{
+ 	            border: 0 none rgba(0, 0, 0, 0);
+    			color: rgba(0, 0, 0, 0.8);
+    			text-decoration: none;
+			}
+			.button-query {
+				color: white;
+            	background: #00AAFF;
+        	}
 
-<input type = 'button'>Click Me</input>
+			body{
+				font-family : "Lucida Grande";
+				font-size: 13px;
+			}
+			body,div{
+				padding : 5px;
+			}
+			div{
+    			margin-top: 10px;
+    			width: auto;
+			}
+			
+			#result a{
+				text-decoration: none;
+			}
+			#result div{
+				margin-top: 2px;
+				padding: 2px;
+				border-bottom: 1px solid grey;
+			}
+			#result em, #fav_div em{
+				color : purple;
+			}
+			#fav_div{
+				position: absolute;
+				top : 60px;
+				right : 10%;
+			}
+			#preview_div{
+				position: absolute;
+				top : 60px;
+				margin-left : 62%;
+			}
+			em{
+				cursor: pointer;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id='fb_div' style='width:60%;'>
+			<p>For searching Facebook Pages, we need your FB Access Token. Please generate it <a href = 'https://developers.facebook.com/tools/explorer' target='_new'>here</a>. This is a temporary token and is valid for only few hours.</p>
+			<input type = 'text' id = 'access_token' size = '30' placeholder = 'Your Access Token' ></input>
+            <input type = 'text' id = 'query' size = '30' placeholder = 'Facebook Developers' value = 'Yahoo'></input>
+            <button class='button-query' id='getResults'>Search</button>
+            <div id = 'result' ></div>
+            <div id = 'preview_div' ></div>
+            <div id = 'fav_div' ></div>
+            <div id = 'nav' style='text-align : center;display : none;'><a href='#' id = 'prev_list'>Prev</a> <a href='#' id = 'next_list'>Next</a></div>  
+
+        </div>
+		<script type='text/javascript'>
+			if (!Array.prototype.find) {
+				Array.prototype.find = function(cb){
+					for(var i = 0; i < this.length; i++){
+						if(cb(this[i])){
+							return this[i];
+						}
+					}
+					return false;
+				}
+			};
+
+			var xmlhttp=new XMLHttpRequest();
+			var get_url_obj = function(){
+				this.main_url = "https://graph.facebook.com/search?type=page";
+				this.fields = "link,name,likes,category,about";
+				this.access_token = "";
+				this.limit = 10;
+				this._offset = 0;
+
+				this.get_url = function(query){
+					var qurey_string = '';
+					for(prop in this){
+						if(prop != 'main_url' && prop != '_offset' && this.hasOwnProperty(prop) && typeof(this[prop]) != 'function')
+							qurey_string += '&' + prop + '=' + this[prop];
+					}
+					return this.main_url + '&q=' + query + '&offset=' + this.offset + qurey_string;
+				};
+				this.loadResults = function(){
+					var query = document.getElementById('query').value.trim();
+					if(query === ''){
+						alert('Please enter Search keywords.');
+						return;
+					}
+					var access_token = document.getElementById('access_token').value.trim();
+					if(access_token === ''){
+						alert('Please enter valid access token.');
+						return;
+					}
+
+					this.access_token = access_token;
+
+					document.getElementById('result').style.opacity = '0.5';
+					document.getElementById('preview_div').innerHTML = '';
+
+					xmlhttp.onreadystatechange=function()
+  					{
+  						if (xmlhttp.readyState == 4 && xmlhttp.status == 200)
+    					{
+    						var response = JSON.parse(xmlhttp.responseText);
+							var div_elem, page_obj;
+							window.response = response;
+							if(response.data == undefined){
+								alert('Error occurred. Please check your access token.');
+							}
+							else{
+								document.getElementById('result').innerHTML = '';
+
+								//Sort Pages by number of likes
+								response.data = response.data.sort(function(a,b){if(a.likes < b.likes) return 1; else return -1;})
+								for(var pageno = 0; pageno < response.data.length; pageno++){
+									div_elem = document.createElement('div');
+									page_obj = response.data[pageno];
+									div_elem.innerHTML = "<a target = '_new' href='"+ page_obj.link +"'><b>"+page_obj.name+"</b></a><br>"
+														+ page_obj.category+', '+ page_obj.likes+' users like this.'
+														+ (page_obj.about == undefined ? '' : "<br>About : "+page_obj.about)
+														+ "<br><em class = 'add_fav' data-id = "+page_obj.id+">Add to Favourites</em>&nbsp;&nbsp;&nbsp;<em class = 'more_info' data-id = "+page_obj.id+">More about this page</em>";
+									document.getElementById('result').appendChild(div_elem);
+									document.getElementById('result').style.opacity = '1';
+								}
+								document.getElementById('nav').style.display = 'block';
+							}
+    					}
+    					else{
+    						//console.log("Called " + xmlhttp.readyState);
+    					}
+  					};
+  					//console.log(this.get_url(query));
+					xmlhttp.open("GET",this.get_url(query),true);
+					xmlhttp.send();
+				};
+
+				this.prevResults = function(){
+					this.offset -= 10;
+					this.loadResults();
+				};
+
+				this.nextResults = function(){
+					this.offset += 10;
+					this.loadResults();
+				};
+			};
+			get_url_obj.prototype = {
+				get offset(){
+					return this._offset;
+				},
+				set offset(val){
+					//Prevent Offset from going below 0
+					if(val >= 0)
+						this._offset = val;
+				}
+			};
+
+			var url_obj = new get_url_obj();
+
+			//For tracking Favourites
+			var Favourites = (function(){
+				var favourite_list = new Array();
+				return (new (function(){
+					this.add = function(page_id){
+						if(favourite_list.indexOf(page_id) !== -1)
+							return;
+						favourite_list.push(page_id);
+
+						//Find matching Page info
+						var page_obj = response.data.find(function(item){
+							if(item.id == page_id)
+								return true;
+						});
+
+						if(page_obj === false){
+							return;
+						}
+
+						if(document.getElementById('fav_div').innerHTML == ''){//Adding First page
+							document.getElementById('fav_div').innerHTML = "<b>Favourite Pages</b>";
+						}
+						//Render it in Favourites div
+						var div_elem = document.createElement('div');
+						div_elem.innerHTML = "<a target = '_new' href='"+ page_obj.link +"'><b>"+page_obj.name+"</b></a><br>"
+											+"<em class='del_fav' data-id = "+page_id+">Remove from Favourites</em>";
+
+						document.getElementById('fav_div').appendChild(div_elem);
+					};
+					this.remove = function(target,page_id){
+						var pos = favourite_list.indexOf(page_id);
+						if(pos === -1){
+							return;
+						}
+						favourite_list.splice(pos,1);
+
+						//remove this element
+						document.getElementById('fav_div').removeChild(target.parentNode);
+					};
+
+					this.preview = function(page_id){
+						var preview_elem = document.getElementById('preview_div');
+						preview_elem.innerHTML = 'Loading...';
+
+						xmlhttp.onreadystatechange=function()
+  						{
+  							if (xmlhttp.readyState==4 && xmlhttp.status==200)
+    						{
+    							var page_obj = JSON.parse(xmlhttp.responseText);
+
+    							preview_elem.innerHTML = "<b>Profile picture : </b><br><img src="+page_obj.picture.data.url+" />";
+    						}
+  						}
+						xmlhttp.open("GET","http://graph.facebook.com/"+page_id+"?fields=link,name,likes,category,about,picture",true);
+						xmlhttp.send();
+					}
+				})());
+			})();
+
+			document.getElementById('getResults').onclick = function(){url_obj.loadResults.call(url_obj)};
+			document.getElementById('prev_list').onclick = function(){url_obj.prevResults.call(url_obj)};
+			document.getElementById('next_list').onclick = function(){url_obj.nextResults.call(url_obj)};
+			document.getElementById('result').onclick = function(e){
+				if(e.target && e.target.className == 'add_fav'){
+					Favourites.add(e.target.getAttribute('data-id'));
+				}
+				if(e.target && e.target.className == 'more_info'){
+					//e.target.parentNode.style.backgroundColor = 'lightblue';
+					Favourites.preview(e.target.getAttribute('data-id'));
+				}
+			};
+			document.getElementById('fav_div').onclick = function(e){
+				if(e.target && e.target.className == 'del_fav'){
+					Favourites.remove(e.target, e.target.getAttribute('data-id'));
+				}
+			};
+		</script>
+	</body>
+</html>
