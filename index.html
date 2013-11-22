@@ -4,12 +4,12 @@
 	<head>
 		<title>Facebook Pages</title>
 		<style type='text/css'>
-            input, button{
-                border: 2px solid #00AAFF;
-                padding: 0.5em 0.5em;
-            }
+			input, button{
+				border: 2px solid #00AAFF;
+				padding: 0.5em 0.5em;
+			}
 			button{
- 	            border: 0 none rgba(0, 0, 0, 0);
+ 	        	border: 0 none rgba(0, 0, 0, 0);
     			color: rgba(0, 0, 0, 0.8);
     			text-decoration: none;
 			}
@@ -61,7 +61,7 @@
 		<div id='fb_div' style='width:60%;'>
 			<p>For searching Facebook Pages, we need your FB Access Token. Please generate it <a href = 'https://developers.facebook.com/tools/explorer' target='_new'>here</a>. This is a temporary token and is valid for only few hours.</p>
 			<input type = 'text' id = 'access_token' size = '30' placeholder = 'Your Access Token' ></input>
-            <input type = 'text' id = 'query' size = '30' placeholder = 'Facebook Developers' value = 'Yahoo'></input>
+            <input type = 'text' id = 'query' size = '30' placeholder = 'Facebook Developers' ></input>
             <button class='button-query' id='getResults'>Search</button>
             <div id = 'result' ></div>
             <div id = 'preview_div' ></div>
@@ -141,9 +141,6 @@
 								}
 								document.getElementById('nav').style.display = 'block';
 							}
-    					}
-    					else{
-    						//console.log("Called " + xmlhttp.readyState);
     					}
   					};
   					//console.log(this.get_url(query));
@@ -236,6 +233,8 @@
 			document.getElementById('getResults').onclick = function(){url_obj.loadResults.call(url_obj)};
 			document.getElementById('prev_list').onclick = function(){url_obj.prevResults.call(url_obj)};
 			document.getElementById('next_list').onclick = function(){url_obj.nextResults.call(url_obj)};
+
+			//Event Delegation for Adding Favourites and Fetching Profile picture.
 			document.getElementById('result').onclick = function(e){
 				if(e.target && e.target.className == 'add_fav'){
 					Favourites.add(e.target.getAttribute('data-id'));
@@ -245,6 +244,8 @@
 					Favourites.preview(e.target.getAttribute('data-id'));
 				}
 			};
+
+			//Event delegation for removing favourites
 			document.getElementById('fav_div').onclick = function(e){
 				if(e.target && e.target.className == 'del_fav'){
 					Favourites.remove(e.target, e.target.getAttribute('data-id'));
